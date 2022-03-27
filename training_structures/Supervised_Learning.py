@@ -87,6 +87,12 @@ def train(
         track_complexity=True):
     model = MMDL(encoders, fusion, head, has_padding=is_packed).cuda()
 
+    #Save epoch,accuracy,validloss in this list of tuples
+    stats = {
+        'valid': [],
+        'train': []    
+            }
+
     def trainprocess():
         additional_params = []
         for m in additional_optimizing_modules:
@@ -183,6 +189,7 @@ def train(
                 acc = accuracy(true, pred)
                 print("Epoch "+str(epoch)+" valid loss: "+str(valloss) +
                       " acc: "+str(acc))
+                stats['valid'].append((epoch,acc,valloss))
                 if acc > bestacc:
                     patience = 0
                     bestacc = acc
@@ -223,6 +230,7 @@ def train(
         all_in_one_train(trainprocess, [model]+additional_optimizing_modules)
     else:
         trainprocess()
+    return stats
 
 
 def single_test(

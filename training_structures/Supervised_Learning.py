@@ -356,3 +356,7 @@ def test(
             single_plot(robustness_result, robustness_key, xlabel='Noise level',
                         ylabel=measure, fig_name=fig_name, method=method_name)
             print("Plot saved as "+fig_name)
+
+        # Little addition to return test accuracy. In multibench they add noise to the test data and return multiple accuracies for each level of noise. For our purposes we'll just use the first accuracy with no noise
+        return robustness_curve
+

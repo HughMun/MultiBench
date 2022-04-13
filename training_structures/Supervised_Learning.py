@@ -92,8 +92,12 @@ def train(
         'valid': [],
         'train': []    
             }
-
+    bestModel = None
+    bestacc = 0
     def trainprocess():
+        nonlocal bestacc
+        nonlocal bestModel
+
         additional_params = []
         for m in additional_optimizing_modules:
             additional_params.extend(
@@ -101,9 +105,9 @@ def train(
         op = optimtype([p for p in model.parameters() if p.requires_grad] +
                        additional_params, lr=lr, weight_decay=weight_decay)
         bestvalloss = 10000
-        bestacc = 0
         bestf1 = 0
         patience = 0
+        
 
         def processinput(inp):
             if input_to_float:
@@ -195,6 +199,7 @@ def train(
                     bestacc = acc
                     print("Saving Best")
                     torch.save(model, save)
+                    bestModel = model
                 else:
                     patience += 1
             elif task == "multilabel":
@@ -230,7 +235,7 @@ def train(
         all_in_one_train(trainprocess, [model]+additional_optimizing_modules)
     else:
         trainprocess()
-    return stats
+    return stats, bestModel, bestacc
 
 
 def single_test(

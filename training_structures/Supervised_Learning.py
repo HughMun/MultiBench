@@ -86,7 +86,7 @@ def train(
         encoders, fusion, head, train_dataloader, valid_dataloader, total_epochs, additional_optimizing_modules=[], is_packed=False,
         early_stop=False, task="classification", optimtype=torch.optim.RMSprop, lr=0.001, weight_decay=0.0,
         objective=nn.CrossEntropyLoss(), auprc=False, save='best.pt', validtime=False, objective_args_dict=None, input_to_float=True, clip_val=8,
-        track_complexity=True):
+        track_complexity=True,max_patience = 7,early_stop_metric = 'acc'):
     model = MMDL(encoders, fusion, head, has_padding=is_packed).cuda()
 
     #Save epoch,accuracy,validloss in this list of tuples
@@ -196,10 +196,17 @@ def train(
                 print("Epoch "+str(epoch)+" valid loss: "+str(valloss) +
                       " acc: "+str(acc))
                 stats['valid'].append((epoch,acc,valloss))
-                if acc > bestacc:
+                if valloss < bestvalloss and early_stop_metric == 'valid':
                     patience = 0
                     bestacc = acc
-                    print("Saving Best")
+                    bestvalloss = valloss
+                    print("Saving Best. (By valloss)")
+                    torch.save(model, save)
+                    bestModel = copy.deepcopy(model)
+                elif acc > bestacc and early_stop_metric == 'acc':
+                    patience = 0
+                    bestacc = acc
+                    print("Saving Best. (By accuracy)")
                     torch.save(model, save)
                     bestModel = copy.deepcopy(model)
                 else:
@@ -225,7 +232,7 @@ def train(
                     torch.save(model, save)
                 else:
                     patience += 1
-            if early_stop and patience > 7:
+            if early_stop and patience > max_patience:
                 break
             if auprc:
                 print("AUPRC: "+str(AUPRC(pts)))

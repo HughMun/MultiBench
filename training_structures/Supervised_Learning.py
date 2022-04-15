@@ -6,6 +6,8 @@ from eval_scripts.performance import AUPRC, f1_score, accuracy, eval_affect
 from eval_scripts.complexity import all_in_one_train, all_in_one_test
 from eval_scripts.robustness import relative_robustness, effective_robustness, single_plot
 from tqdm import tqdm
+import copy
+import sklearn.metrics
 #import pdb
 
 softmax = nn.Softmax()
@@ -199,7 +201,7 @@ def train(
                     bestacc = acc
                     print("Saving Best")
                     torch.save(model, save)
-                    bestModel = model
+                    bestModel = copy.deepcopy(model)
                 else:
                     patience += 1
             elif task == "multilabel":
@@ -304,7 +306,21 @@ def single_test(
             print("AUPRC: "+str(AUPRC(pts)))
         if task == "classification":
             print("acc: "+str(accuracy(true, pred)))
-            return {'Accuracy': accuracy(true, pred)}
+            print('f1_score_1: ',sklearn.metrics.f1_score(true.cpu().numpy(), pred.cpu().numpy(), average="binary",pos_label=0))
+            print('f1_score_2: ',sklearn.metrics.f1_score(true.cpu().numpy(), pred.cpu().numpy(), average="binary",pos_label=1))
+            print('precision_1: ',sklearn.metrics.precision_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=0))
+            print('precision_2: ',sklearn.metrics.precision_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=1))
+            print('recall_1: ',sklearn.metrics.recall_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=0))
+            print('recall_2: ',sklearn.metrics.recall_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=1))
+            return {'Accuracy': accuracy(true, pred),
+                    'f1_score_1': sklearn.metrics.f1_score(true.cpu().numpy(), pred.cpu().numpy(), average="binary",pos_label=0),
+                    'f1_score_2': sklearn.metrics.f1_score(true.cpu().numpy(), pred.cpu().numpy(), average="binary",pos_label=1),
+                    'precision_1': sklearn.metrics.precision_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=0),
+                    'precision_2': sklearn.metrics.precision_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=1),
+                    'recall_1': sklearn.metrics.recall_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=0),
+                    'recall_2': sklearn.metrics.recall_score(true.cpu().numpy(),pred.cpu().numpy(),average="binary",pos_label=1),
+                    'true':true.cpu().numpy(),
+                    'predicted':pred.cpu().numpy()}
         elif task == "multilabel":
             print(" f1_micro: "+str(f1_score(true, pred, average="micro")) +
                   " f1_macro: "+str(f1_score(true, pred, average="macro")))
@@ -348,19 +364,19 @@ def test(
                 curve = robustness_curve.get(k, [])
                 curve.append(v)
                 robustness_curve[k] = curve
-        for measure, robustness_result in robustness_curve.items():
-            robustness_key = '{} {}'.format(dataset, noisy_modality)
-            print("relative robustness ({}, {}): {}".format(noisy_modality, measure, str(
-                relative_robustness(robustness_result, robustness_key))))
-            if len(robustness_curve) != 1:
-                robustness_key = '{} {}'.format(robustness_key, measure)
-            print("effective robustness ({}, {}): {}".format(noisy_modality, measure, str(
-                effective_robustness(robustness_result, robustness_key))))
-            fig_name = '{}-{}-{}-{}'.format(method_name,
-                                            robustness_key, noisy_modality, measure)
-            single_plot(robustness_result, robustness_key, xlabel='Noise level',
-                        ylabel=measure, fig_name=fig_name, method=method_name)
-            print("Plot saved as "+fig_name)
+        #for measure, robustness_result in robustness_curve.items():
+        #    robustness_key = '{} {}'.format(dataset, noisy_modality)
+        #    print("relative robustness ({}, {}): {}".format(noisy_modality, measure, str(
+        #        relative_robustness(robustness_result, robustness_key))))
+        #    if len(robustness_curve) != 1:
+        #        robustness_key = '{} {}'.format(robustness_key, measure)
+        #    print("effective robustness ({}, {}): {}".format(noisy_modality, measure, str(
+        #        effective_robustness(robustness_result, robustness_key))))
+        #    fig_name = '{}-{}-{}-{}'.format(method_name,
+        #                                    robustness_key, noisy_modality, measure)
+        #    single_plot(robustness_result, robustness_key, xlabel='Noise level',
+        #                ylabel=measure, fig_name=fig_name, method=method_name)
+        #    print("Plot saved as "+fig_name)
 
         # Little addition to return test accuracy. In multibench they add noise to the test data and return multiple accuracies for each level of noise. For our purposes we'll just use the first accuracy with no noise
         return robustness_curve
